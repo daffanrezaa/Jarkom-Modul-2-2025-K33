@@ -5,7 +5,7 @@ apt update && apt install nginx php8.4-fpm -y
 mkdir -p /var/www/app.K33.com/html
 
 # Buat file beranda (index.php)
-echo '<h1>Vingilot Berlayar!</h1><p>Ini adalah halaman utama dinamis yang disajikan oleh PHP.</p><p>Kunjungi <a href="/about">halaman tentang kami</a>.</p>' > /var/www/app.K33.com/index.php
+echo "<?php echo '<h1>Vingilot Berlayar!</h1><p>Ini adalah halaman utama dinamis yang disajikan oleh PHP.</p><p>Kunjungi <a href=\"/about\">halaman tentang kami</a>.</p>'; ?>" > /var/www/app/index.php
 
 # Buat file about.php
 echo '<h1>Tentang Kapal Vingilot</h1><p>Tanggal server saat ini adalah: <?php echo date("Y-m-d H:i:s"); ?></p>' > /var/www/app.K33.com/about.php

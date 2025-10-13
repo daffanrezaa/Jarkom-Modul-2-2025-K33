@@ -40,7 +40,8 @@ nano /etc/bind/K33.com
 # jangan masukin ke /root/.bashrc
 $TTL    604800
 @       IN      SOA     ns1.K33.com. root.K33.com. (
-                        2025101201      ; Serial (Gunakan YYYYMMDDNN)
+                        2025101201
+                              ; Serial (Gunakan YYYYMMDDNN)
                          604800         ; Refresh
                           86400         ; Retry
                         2419200         ; Expire
@@ -65,6 +66,9 @@ nameserver 10.80.3.3
 nameserver 10.80.3.4
 nameserver 192.168.122.1
 EOF
+
+# restart service bind9
+service bind9 restart
 
 # di Valmar
 apt update && apt install bind9 -y
@@ -91,6 +95,7 @@ nameserver 10.80.3.4
 nameserver 192.168.122.1
 EOF
 
+# restart service bind9
 service bind9 restart
 
 # untuk pengecekan:

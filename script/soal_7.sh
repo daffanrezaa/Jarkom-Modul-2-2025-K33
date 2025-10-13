@@ -3,7 +3,12 @@
 
 nano /etc/bind/K33.com
 
+# tambahin di line paling bawah
 # memastikan A record dan Canonical NAME record baru
+# comment sirion dengan A record, karena A dan CNAME tidak boleh digunakan secara bersamaan
+; ; www     IN      A       10.80.3.2       ; www -> Sirion
+
+# tambahkan di line paling bawah
 www       IN    CNAME   sirion.K33.com.
 static    IN    CNAME   lindon.K33.com.
 app       IN    CNAME   vingilot.K33.com.
@@ -12,7 +17,7 @@ app       IN    CNAME   vingilot.K33.com.
 service bind9 restart
 
 # tes dari Erarendil
-# www cname ke sirion -> ke IP 10.80.3.2
+# www cname ke sirion
 dig www.K33.com
 
 # tes alias static (IP Lindon)

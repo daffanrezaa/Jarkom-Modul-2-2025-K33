@@ -2,6 +2,7 @@
 # deklarasi reverse zone
 nano /etc/bind/named.conf.local
 
+# tambahin baru di line paling akhir 
 zone "3.80.10.in-addr.arpa" {
     type master;
     file "/etc/bind/db.10.80.3"; // Nama file untuk reverse zone
@@ -11,9 +12,10 @@ zone "3.80.10.in-addr.arpa" {
 # buat file db.10.80.3 dengan pointer
 nano /etc/bind/db.10.80.3
 
+# tambahin baru
 $TTL    604800
 @       IN      SOA     ns1.K33.com. root.K33.com. (
-                        2025101204      ; Serial (NAIKKAN NOMOR INI!)
+                        2025101201      ; Serial (NAIKKAN NOMOR INI!)
                          604800         ; Refresh
                           86400         ; Retry
                         2419200         ; Expire
@@ -35,6 +37,7 @@ service bind9 restart
 # deklarasi zona slave
 nano /etc/bind/named.conf.local
 
+# tambahin zone baru
 zone "3.80.10.in-addr.arpa" {
     type slave;
     file "db.10.80.3";

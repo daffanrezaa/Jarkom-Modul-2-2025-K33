@@ -399,12 +399,99 @@ Badai mengubah garis pantai. Ubah A record lindon.<xxxx>.com ke alamat baru (uba
 Andaikata bumi bergetar dan semua tertidur sejenak, mereka harus bangkit sendiri. Pastikan layanan inti bind9 di ns1/ns2, nginx di Sirion/Lindon, dan PHP-FPM di Vingilot autostart saat reboot, lalu verifikasi layanan kembali menjawab sesuai fungsinya.
 
 ### Soal 18
-Sang musuh memiliki banyak nama. Tambahkan melkor.<xxxx>.com sebagai record TXT berisi “Morgoth (Melkor)” dan tambahkan morgoth.<xxxx>.com sebagai CNAME → melkor.<xxxx>.com, verifikasi query TXT terhadap melkor dan bahwa query ke morgoth mengikuti aliasnya.
+Sang musuh memiliki banyak nama. Tambahkan `melkor.<xxxx>.com` sebagai record TXT berisi “Morgoth (Melkor)” dan tambahkan `morgoth.<xxxx>.com` sebagai `CNAME → melkor.<xxxx>.com`, verifikasi query TXT terhadap melkor dan bahwa query ke morgoth mengikuti aliasnya.
+
+Pertama kita masuk ke Tirion dan buka script `nano /etc/bind/K33.com`, kemudian kita tambahkan kode di bawah ini
+```bash
+melkor      IN      TXT     "Morgoth (Melkor)"
+morgoth     IN      CNAME   melkor
+```
+
+Setelah itu kita bisa melakukan restart pada bind dan setelah itu kita bisa melakukan verifikasi dengan klien lain
+```bash
+#verifikasi txt di erlond
+dig melkor.K33.com TXT
+
+#verifikasi morgoth di elrond
+dig morgoth.K33.com
+```
+
+Hasil dari verifikasi morgoth
+![morgoth](assets/18_cekmorgoth.png)
+
+Hasil dari verifikasi txt
+![txt](assets/18_cektxt.png)
 
 ### Soal 19
 Pelabuhan diperluas bagi para pelaut. Tambahkan havens.<xxxx>.com sebagai CNAME → www.<xxxx>.com, lalu akses layanan melalui hostname tersebut dari dua klien berbeda untuk memastikan resolusi dan rute aplikasi berfungsi.
 
+Pertama kita masuk ke Tirion dan buka script `nano /etc/bind/K33.com` dan kita tambahkan CNAME dengan kode di bawah ini
+```bash
+havens      IN      CNAME   www`
+```
+
+Setelah itu kita bisa melakukan restart pada bind dan melakukan verifikasi dengan dua klien yang berbeda
+```bash
+#Verifikasi Resolusi DNS
+#di erlond
+dig havens.K33.com
+
+#Verifikasi Rute Aplikasi
+curl http://havens.K33.com/
+
+#Verifikasi Resolusi DNS
+#di elwing
+dig havens.K33.com
+
+#Verifikasi Rute Aplikasi
+curl http://havens.K33.com/
+```
+
+Berikut hasilnya di elrond
+![curl](assets/19_curlHavens.png)
+![dig](assets/19_digHavens.png)
+
 ### Soal 20
 Kisah ditutup di beranda Sirion. Sediakan halaman depan bertajuk “War of Wrath: Lindon bertahan” yang memuat tautan ke /app dan /static. Pastikan seluruh klien membuka beranda dan menelusuri kedua tautan tersebut menggunakan hostname (mis. www.<xxxx>.com), bukan IP address.
+
+Pertama kita masuk ke Sirion dan buka script `nano /etc/nginx/sites-available/sirion.K33.com` untuk melakukan modifikasi konfigurasi nginx dan kita tambahkan kode di bawah ini
+```bash
+# Tambahkan pada BLOK 2: UNTUK PANGGILAN RESMI (KANONIK)
+server {
+    listen 80;
+    server_name www.K33.com;
+
+    # --- (BARU) HALAMAN DEPAN KHUSUS UNTUK SOAL 20 ---
+    # Tanda '=' memastikan ini hanya cocok untuk halaman root (homepage)
+    location = / {
+        # Mengembalikan kode 200 (OK) dan konten HTML
+        return 200 '
+        <html>
+            <head>
+                <title>War of Wrath</title>
+            </head>
+            <body style="font-family: sans-serif; background-color: #f4f4f4; padding: 2em;">
+                <h1>War of Wrath: Lindon bertahan</h1>
+                <p>Kisah-kisah dari Beleriand dapat diakses melalui tautan berikut:</p>
+                <ul>
+                    <li><a href="/static/">Telusuri Arsip Statis di Lindon</a></li>
+                    <li><a href="/app/">Dengarkan Kisah Dinamis dari Vingilot</a></li>
+                </ul>
+            </body>
+        </html>';
+        # Memberitahu browser bahwa ini adalah konten HTML
+        add_header Content-Type text/html;
+    }
+```
+
+Kemudian kita bisa melakukan restart pada nginx dan melakukan verifikasi dengan klien lain
+```bash
+# Verifikasi dari kilen lain cth:erlond
+curl http://www.K33.com/
+
+# tes halaman lain 
+curl http://www.K33.com/static/
+curl http://www.K33.com/app/
+```
 
 

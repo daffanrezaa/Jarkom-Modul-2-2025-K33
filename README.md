@@ -531,6 +531,44 @@ Hasil uji statis
 ### Soal 16
 Badai mengubah garis pantai. Ubah A record lindon.<xxxx>.com ke alamat baru (ubah IP paling belakangnya saja agar mudah), naikkan SOA serial di Tirion (ns1) dan pastikan Valmar (ns2) tersinkron, karena static.<xxxx>.com adalah CNAME → lindon.<xxxx>.com, seluruh akses ke static.<xxxx>.com mengikuti alamat baru, tetapkan TTL = 30 detik untuk record yang relevan dan verifikasi tiga momen yakni sebelum perubahan (mengembalikan alamat lama), sesaat setelah perubahan namun sebelum TTL kedaluwarsa (masih alamat lama karena cache), dan setelah TTL kedaluwarsa (beralih ke alamat baru).
 
+Pertama buka Tirion dan buka `nano /etc/bind/K33.com` kemudian tambahkan kode ini
+```bash
+#rubah record lindon dan tambahkan ttl 30
+lindon      30      IN      A       10.80.3.5
+```
+
+Kemudian kita dapat melakukan restart pada bind. Dan kemudian sebelum perubahan kita bisa mengecek terlebih dahulu alamat staticnya menggunakan klien lain.
+```bash
+#Sebelum perubahan
+#Gunakan dig untuk menanyakan alamat static.K33.com. dig akan menunjukkan TTL.
+dig static.K33.com
+```
+
+Kemudian saat perbuhan kita melakukan edit pada ipnya
+```bash
+#saat perubahan
+#di lindon
+# Hapus alamat IP lama
+ip addr del 10.80.3.5/24 dev eth0
+# Tambahkan alamat IP baru
+ip addr add 10.80.3.55/24 dev eth0
+```
+
+Kemudian buka lagi Tirion dan buka `nano /etc/bind/K33.com` dan ubah ip lindon ke yang baru \
+```bash
+#Ubah IP lindon ke yang baru:
+lindon      30      IN      A       10.80.3.55
+```
+
+Setelah itu lakukan restart dan langsung pindah ke klien lain untuk mengecek perubahan sebelum 30 detik
+```bash
+dig static.K33.com
+```
+Kemudian bisa jalankan lagi jika di rasa sudah melewati 30 detik dan yang terakhir lakukan verifikasi di valmar 
+```bash
+dig @localhost lindon.K33.com
+```
+
 ### Soal 17
 Andaikata bumi bergetar dan semua tertidur sejenak, mereka harus bangkit sendiri. Pastikan layanan inti bind9 di ns1/ns2, nginx di Sirion/Lindon, dan PHP-FPM di Vingilot autostart saat reboot, lalu verifikasi layanan kembali menjawab sesuai fungsinya.
 

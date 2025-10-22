@@ -253,7 +253,7 @@ nameserver 192.168.122.1
 - Testing dengan melakukan `ping` pada salah satu client
 `ping K33.com -c 5`
 
-![no5](/assets/valmar_ping33_modul2_jarkom.png)
+![no4](/assets/valmar_ping33_modul2_jarkom.png)
 
 
 ### Soal 5
@@ -276,14 +276,261 @@ sirion    IN    A       10.80.3.2
 lindon    IN    A       10.80.3.5
 vingilot  IN    A       10.80.3.6
 ```
+
 - Restart layanan bind9
 `service bind9 restart`
 
+- Test ping di client mana saja
+```
+ping cirdan -c 2
+ping cirdan.K33.com -c 2
+ping elrond.K33.com -c 2
+```
+
+![no5](/assets/5_modul2_jarkom.png)
+
 ### Soal 6
+Lonceng Valmar berdentang mengikuti irama Tirion. Pastikan zone transfer berjalan, Pastikan Valmar (ns2) telah menerima salinan zona terbaru dari Tirion (ns1). Nilai serial SOA di keduanya harus sama
+
+- Edit konfigurasi pada `/etc/bind/K33.com`, tambahkan serial number ubah jadi 3
+```
+eonwe     IN    A       10.80.3.1
+tirion    IN    CNAME   ns1.K33.com.
+valmar    IN    CNAME   ns2.K33.com.
+```
+
+- Restart service bind9
+`service bind9 restart`
+
+- Tes apakah SOA pada Master dan client sama 
+```
+dig @tirion.K33.com K33.com SOA
+dig @valmar.K33.com K33.com SOA
+```
+
+
+![no6a](/assets/tirion_dig_modul2_jarkom.png)
+
+
+![no6b](/assets/elwing_dig_modul2_jarkom.png)
+
+
+
 ### Soal 7
+Peta kota dan pelabuhan dilukis. Sirion sebagai gerbang, Lindon sebagai web statis, Vingilot sebagai web dinamis. Tambahkan pada zona <xxxx>.com A record untuk sirion.<xxxx>.com (IP Sirion), lindon.<xxxx>.com (IP Lindon), dan vingilot.<xxxx>.com (IP Vingilot). Tetapkan CNAME :
+www.<xxxx>.com → sirion.<xxxx>.com, 
+static.<xxxx>.com → lindon.<xxxx>.com, dan 
+app.<xxxx>.com → vingilot.<xxxx>.com. 
+Verifikasi dari dua klien berbeda bahwa seluruh hostname tersebut ter-resolve ke tujuan yang benar dan konsisten.
+
+- Edit config `/etc/bind/K33.com`, update serial number
+
+# memastikan A record dan Canonical NAME record baru
+# comment sirion dengan A record, karena A dan CNAME tidak boleh digunakan secara bersamaan
+; ; www     IN      A       10.80.3.2       ; www -> Sirion
+
+# tambahkan di line paling bawah
+www       IN    CNAME   sirion.K33.com.
+static    IN    CNAME   lindon.K33.com.
+app       IN    CNAME   vingilot.K33.com.
+
+- Restart bind9
+`service bind9 restart`
+
+- Lakukan pengetesan
+```
+Tes dari Erarendil
+dig www.K33.com
+
+tes alias static (IP Lindon)
+ping -c 2 static.K33.com
+
+tes alias app (IP Vingilot)
+ping -c 2 app.K33.com
+
+tes dari Cirdan
+tes alias www (menujukkan alias dan IP)
+host www.K33.com
+
+tes alias static (menujukkan alias dan IP)
+host static.K33.com
+
+tes alias app (menujukkan alias dan IP)
+host app.K33.com
+```
+
+
 ### Soal 8
+Setiap jejak harus bisa diikuti. Di Tirion (ns1) deklarasikan satu reverse zone untuk segmen DMZ tempat Sirion, Lindon, Vingilot berada. Di Valmar (ns2) tarik reverse zone tersebut sebagai slave, isi PTR untuk ketiga hostname itu agar pencarian balik IP address mengembalikan hostname yang benar, lalu pastikan query reverse untuk alamat Sirion, Lindon, Vingilot dijawab authoritative.
+
+- Tambahkan zone baru untuk reverse zone di `/etc/bind/named.conf.local`
+```
+zone "3.80.10.in-addr.arpa" {
+    type master;
+    file "/etc/bind/db.10.80.3"; 
+    allow-transfer { 10.80.3.4; }; /
+};
+```
+
+- Buat file zona reverse di `/etc/bind/db.10.80.3`
+```
+$TTL    604800
+@       IN      SOA     ns1.K33.com. root.K33.com. (
+                        2025101201      ; Serial (NAIKKAN NOMOR INI!)
+                         604800         ; Refresh
+                          86400         ; Retry
+                        2419200         ; Expire
+                         604800 )       ; Negative Cache TTL
+;
+; Name Servers
+@       IN      NS      ns1.K33.com.
+@       IN      NS      ns2.K33.com.
+
+; PTR Records (IP -> Hostname) untuk segmen DMZ
+2       IN      PTR     sirion.K33.com.     ; 10.80.3.2 -> sirion
+5       IN      PTR     lindon.K33.com.     ; 10.80.3.5 -> lindon
+6       IN      PTR     vingilot.K33.com.   ; 10.80.3.6 -> vingilot
+```
+
+- Restart service bind9
+`service bind9 restart`
+
+
+- Deklarasi zona slave di Valmar di `/etc/bind/named.conf.local`
+```
+zone "3.80.10.in-addr.arpa" {
+    type slave;
+    file "db.10.80.3";
+    masters { 10.80.3.3; };
+};
+```
+- Restart service bind9
+`service bind9 restart`
+
+- Testing di salah satu client
+```
+dig -x 10.80.3.2
+dig -x 10.80.3.5
+```
+![no8](/assets/dig_reverse_modul2_jarkom.png)
+
+
 ### Soal 9
+Lampion Lindon dinyalakan. Jalankan web statis pada hostname static.<xxxx>.com dan buka folder arsip /annals/ dengan autoindex (directory listing) sehingga isinya dapat ditelusuri. Akses harus dilakukan melalui hostname, bukan IP.
+
+- Update dan install nginx di Lindon
+`apt update && apt install nginx -y`
+
+- Buat direktori dan buat file index.html dan file kosong
+```
+mkdir -p /var/www/static.K33.com/html/annals
+
+echo '<h1>Personne ne naît grand cuisinier, on le devient en pratiquant.</h1>' > /var/www/static.K33.com/html/index.html
+
+touch /var/www/static.K33.com/html/annals/jarkom_asik.txt
+touch /var/www/static.K33.com/html/annals/jarkom_mengurangi_lifespan.txt
+```
+
+- Lakukan konfigurasi nginx server bloc (static.K33.com)
+
+```
+server {
+    listen 80;
+    server_name static.K33.com;
+    root /var/www/static.K33.com/html;
+
+    index index.html;
+
+    location / {
+        try_files \$uri \$uri/ =404;
+    }
+
+    location /annals/ {
+        autoindex on;
+    }
+}
+```
+
+- Aktivasi situs
+```
+ln -s /etc/nginx/sites-available/static.K33.com /etc/nginx/sites-enabled/static.K33.com
+rm /etc/nginx/sites-enabled/default
+```
+
+- Restart nginx
+```
+nginx -t
+service nginx restart
+```
+
+- Testing 
+```
+curl http://static.K33.com
+curl http://static.K33.com/annals/
+```
+
+![no9](/assets/html_cuisine.png)
+
 ### Soal 10
+Vingilot mengisahkan cerita dinamis. Jalankan web dinamis (PHP-FPM) pada hostname app.<xxxx>.com dengan beranda dan halaman about, serta terapkan rewrite sehingga /about berfungsi tanpa akhiran .php. Akses harus dilakukan melalui hostname.
+
+- Lakukan update dan install nginx
+`apt update && apt install nginx php8.4-fpm -y`
+
+- Buat direktori dan file yang diperlukan
+`mkdir -p /var/www/app.K33.com/html`
+
+- Buat file beranda (index.php)
+```
+echo "<?php echo '<h1>Vingilot Berlayar!</h1><p>Ini adalah halaman utama dinamis yang disajikan oleh PHP.</p><p>Kunjungi <a href=\"/about\">halaman tentang kami</a>.</p>'; ?>" > /var/www/app.K33.com/html/index.php
+```
+
+- Buat file about.php
+```
+echo '<h1>Tentang Kapal Vingilot</h1><p>Tanggal server saat ini adalah: <?php echo date("Y-m-d H:i:s"); ?></p>' > /var/www/app.K33.com/html/about.php
+```
+
+- Buat konfigurasi di `/etc/nginx/sites-available/app.K33.com`
+
+```
+server {
+    listen 80;
+    server_name app.K33.com;
+    root /var/www/app.K33.com/html;
+    index index.php;
+
+    rewrite ^/about$ /about.php last;
+
+    location / {
+        try_files \$uri \$uri/ =404;
+    }
+
+    location ~ .php$ {
+        include snippets/fastcgi-php.conf;
+        fastcgi_pass unix:/var/run/php/php8.4-fpm.sock;
+    }
+}
+```
+
+- Aktifkan konfigurasi situs
+```
+ln -sf /etc/nginx/sites-available/app.K33.com /etc/nginx/sites-enabled/
+rm -f /etc/nginx/sites-enabled/default 
+```
+
+- Restart nginx dan php
+nginx -t
+service nginx restart
+service php8.4-fpm restart
+
+- Tes webpage di client lain
+```
+curl http://app.K33.com/
+curl http://app.K33.com/about.php
+```
+
+![no10](/assets/aboutphp_modul2_jarkom.png)
+
 ### Soal 11
 Di muara sungai, Sirion berdiri sebagai reverse proxy. Terapkan path-based routing: /static → Lindon dan /app → Vingilot, sambil meneruskan header Host dan X-Real-IP ke backend. Pastikan Sirion menerima www.<xxxx>.com (kanonik) dan sirion.<xxxx>.com, dan bahwa konten pada /static dan /app di-serve melalui backend yang tepat.
 

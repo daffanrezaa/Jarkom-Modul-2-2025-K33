@@ -1,4 +1,4 @@
-# version 2
+# version 3
 # tambahkan di /etc/bind/K33.com
 # naikin nomor serial di tanggal yang statis
 nano /etc/bind/K33.com

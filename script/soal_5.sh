@@ -1,9 +1,8 @@
 # di Tirion tambahkan alamat untuk setiap host
-# version 1
 nano /etc/bind/K33.com 
 
-# /root/.bashrc
-cat <<EOF > /etc/bind/K33.com
+# ubah version jadi 2
+# tambahkan hostname server dan client di line terakhir
 ; -----  ADD HOSTNAME DI SINI -----
 ; Hostname Klien
 earendil  IN    A       10.80.1.2
@@ -16,22 +15,11 @@ maglor    IN    A       10.80.2.4
 sirion    IN    A       10.80.3.2
 lindon    IN    A       10.80.3.5
 vingilot  IN    A       10.80.3.6
-EOF
-# masukin ke line paling bawah /etc/bin/K33.com
-
 
 # restart bind9
 service bind9 restart
 
-# di Elwing
-cat <<EOF > /etc/resolv.conf
-search K33.com
-nameserver 10.80.3.3
-nameserver 10.80.3.4
-nameserver 192.168.122.1
-EOF
-
-# tes ping
+# di Elwing tes ping
 ping cirdan
 ping cirdan.K33.com
 ping elrond.K33.com

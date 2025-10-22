@@ -47,7 +47,6 @@ zone "3.80.10.in-addr.arpa" {
 # restart bind9
 service bind9 restart
 
-
 # testing -> flag aa (di salah satu client)
 dig -x 10.80.3.2
 

@@ -1,6 +1,5 @@
-# version 3
+# version 4
 # di Tirion, tambahin di /etc/bind/K33.com
-
 nano /etc/bind/K33.com
 
 # tambahin di line paling bawah

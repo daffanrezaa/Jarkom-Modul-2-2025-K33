@@ -23,7 +23,7 @@ server {
 
     # Konfigurasi umum untuk menangani request
     location / {
-        try_files $uri $uri/ =404;
+        try_files \$uri \$uri/ =404;
     }
 
     # Konfigurasi KHUSUS untuk folder /annals/
@@ -34,7 +34,7 @@ server {
 }
 
 # Buat link untuk mengaktifkan situs
-ln -s /etc/nginx/sites-available/static.K33.com /etc/nginx/sites-enabled/
+ln -s /etc/nginx/sites-available/static.K33.com /etc/nginx/sites-enabled/static.K33.com
 
 # (Opsional tapi direkomendasikan) Hapus link default agar tidak ada konflik
 rm /etc/nginx/sites-enabled/default
@@ -43,7 +43,7 @@ rm /etc/nginx/sites-enabled/default
 nginx -t
 service nginx restart
 
-# akses web
+# akses web di client lain
 curl http://static.K33.com
 curl http://static.K33.com/annals/
 

@@ -5,10 +5,10 @@ apt update && apt install nginx php8.4-fpm -y
 mkdir -p /var/www/app.K33.com/html
 
 # Buat file beranda (index.php)
-echo "<?php echo '<h1>Vingilot Berlayar!</h1><p>Ini adalah halaman utama dinamis yang disajikan oleh PHP.</p><p>Kunjungi <a href=\"/about\">halaman tentang kami</a>.</p>'; ?>" > /var/www/app/index.php
+echo "<?php echo '<h1>Vingilot Berlayar!</h1><p>Ini adalah halaman utama dinamis yang disajikan oleh PHP.</p><p>Kunjungi <a href=\"/about\">halaman tentang kami</a>.</p>'; ?>" > /var/www/app.K33.com/html/index.php
 
 # Buat file about.php
-echo '<h1>Tentang Kapal Vingilot</h1><p>Tanggal server saat ini adalah: <?php echo date("Y-m-d H:i:s"); ?></p>' > /var/www/app.K33.com/about.php
+echo '<h1>Tentang Kapal Vingilot</h1><p>Tanggal server saat ini adalah: <?php echo date("Y-m-d H:i:s"); ?></p>' > /var/www/app.K33.com/html/about.php
 
 # file konfigurasi nginx
 nano /etc/nginx/sites-available/app.K33.com
@@ -23,7 +23,7 @@ server {
     rewrite ^/about$ /about.php last;
 
     location / {
-        try_files $uri $uri/ =404;
+        try_files \$uri \$uri/ =404;
     }
 
     # Blok ini memberitahu Nginx untuk meneruskan semua file
@@ -35,15 +35,14 @@ server {
 }
 
 # aktifkan konfigurasi situs
-ln -s /etc/nginx/sites-available/app.K33.com /etc/nginx/sites-enabled/
-rm /etc/nginx/sites-enabled/default 
+ln -sf /etc/nginx/sites-available/app.K33.com /etc/nginx/sites-enabled/
+rm -f /etc/nginx/sites-enabled/default 
 
 # restart nginx dan php
 nginx -t
-service php8.4-fpm restart
 service nginx restart
+service php8.4-fpm restart
 
-# tes webpage
-curl http://app.k33.com/
-curl http://app.k33.com/about.php
-curl http://app.k33.com/about
+# tes webpage di client lain
+curl http://app.K33.com/
+curl http://app.K33.com/about.php

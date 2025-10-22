@@ -140,9 +140,145 @@ iface eth0 inet static
 ![topologi](/assets/topologi_modul2_jarkom.png)
 
 ### Soal 2
+Angin dari luar mulai berhembus ketika Eonwe membuka jalan ke awan NAT. Pastikan jalur WAN di router aktif dan NAT meneruskan trafik keluar bagi seluruh alamat internal sehingga host di dalam dapat mencapai layanan di luar menggunakan IP address.
+
+- Masuk ke router Eonwe update dan install iptables
+```apt update && apt install iptables`
+
+- Jalankan perintah ini
+`iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE -s 10.80.0.0/16`
+
+![iptables](/assets/iptables_eonwe_modul2_jarkom.png)
+
 ### Soal 3
+Kabar dari Barat menyapa Timur. Pastikan kelima klien dapat saling berkomunikasi lintas jalur (routing internal via Eonwe berfungsi), lalu pastikan setiap host non-router menambahkan resolver 192.168.122.1 saat interfacenya aktif agar akses paket dari internet tersedia sejak awal.
+
+- Buat konfigurasi DNS Resolver di semua client pada `/etc/resolv.conf`
+`echo nameserver 192.168.122.1 > /etc/resolv.conf`
+
+![resolv](/assets/earendil_ping_modul2_jarkom.png)
+
 ### Soal 4
+Para penjaga nama naik ke menara, di Tirion (ns1/master) bangun zona K33.com sebagai authoritative dengan SOA yang menunjuk ke ns1.K33.com dan catatan NS untuk ns1.K33.com dan ns2.K33.com. Buat A record untuk ns1.K33.com dan ns2.K33.com yang mengarah ke alamat Tirion dan Valmar sesuai glosarium, serta A record apex K33.com yang mengarah ke alamat Sirion (front door), aktifkan notify dan allow-transfer ke Valmar, set forwarders ke 192.168.122.1. Di Valmar (ns2/slave) tarik zona K33.com dari Tirion dan pastikan menjawab authoritative. Pada seluruh host non-router ubah urutan resolver menjadi IP dari ns1.K33.com → ns2.K33.com → 192.168.122.1. Verifikasi query ke apex dan hostname layanan dalam zona dijawab melalui ns1/ns2.'
+
+- Melakukan update repositori dan menginstal paket `bind9` di Iirion (Master).
+```
+apt update && apt install bind9 -y
+ln -s /etc/init.d/named /etc/init.d/bind9
+```
+
+- Mengatur file konfigurasi opsi global BIND untuk menetapkan `forwarders` ke `192.168.122.1`. Ini berarti jika DNS Tirion tidak mengetahui alamat suatu domain (misal, `google.com`), ia akan meneruskan (forward) permintaan tersebut ke IP router.
+
+```
+nano /etc/bind/named.conf.options
+
+options {
+        directory "/var/cache/bind";
+        dnssec-validation auto; 
+        listen-on-v6 { any; };
+
+        forwarders {
+                192.168.122.1; 
+        };
+        allow-query { any; };
+};
+```
+
+- Mendaftarkan zona `K33.com` di server Tirion sebagai server `master`.
+```
+nano /etc/bind/named.conf.local
+
+zone "K33.com" {
+    type master;
+    file "/etc/bind/K33.com";
+    notify yes;
+    allow-transfer { 10.80.3.4; };
+};
+```
+
+- Pembuatan File Zone (`/etc/bind/K33.com`)
+```
+nano /etc/bind/K33.com
+
+$TTL    604800
+@       IN      SOA     ns1.K33.com. root.K33.com. (
+                        2025101201      ; Serial
+                         604800         ; Refresh
+                          86400         ; Retry
+                        2419200         ; Expire
+                         604800 )       ; Negative Cache TTL
+;
+; Name Servers (NS Records)
+@       IN      NS      ns1.K33.com.
+@       IN      NS      ns2.K33.com.
+
+; A Records 
+@       IN      A       10.80.3.2       ; K33.com -> Sirion
+ns1     IN      A       10.80.3.3       ; ns1 -> Tirion
+ns2     IN      A       10.80.3.4       ; ns2 -> Valmar
+www     IN      A       10.80.3.2       ; www -> Sirion
+```
+
+- Menerapkan semua perubahan konfigurasi dengan me-restart layanan BIND9.
+`service bind9 restart`
+
+- Pada server slave (Valmar), lakukan update dan instalasi bind9
+```
+apt update && apt install bind9 -y
+ln -s /etc/init.d/named /etc/init.d/bind9
+```
+- Mengkonfigurasi Valmar sebagai `slave` untuk zona `K33.com`.
+```
+nano /etc/bind/named.conf.local
+
+zone "K33.com" {
+    type slave;
+    file "K33.com";
+    masters { 10.80.3.3; }; 
+};
+```
+- Menerapkan konfigurasi `Slave` dan memicu `zone transfer` pertama.
+`service bind9 restart`
+
+- KE SEMUA CLIENT, lakukan konfigurasi pada `/etc/resolv.conf`
+```
+nano /etc/resolv.conf
+
+search K33.com
+nameserver 10.80.3.3
+nameserver 10.80.3.4
+nameserver 192.168.122.1
+```
+
+- Testing dengan melakukan `ping` pada salah satu client
+`ping K33.com -c 5`
+
+![no5](/assets/valmar_ping33_modul2_jarkom.png)
+
+
 ### Soal 5
+“Nama memberi arah,” kata Eonwe. Namai semua tokoh (hostname) sesuai glosarium, eonwe, earendil, elwing, cirdan, elrond, maglor, sirion, tirion, valmar, lindon, vingilot, dan verifikasi bahwa setiap host mengenali dan menggunakan hostname tersebut secara system-wide. Buat setiap domain untuk masing masing node sesuai dengan namanya (contoh: eru.<xxxx>.com) dan assign IP masing-masing juga. Lakukan pengecualian untuk node yang bertanggung jawab atas ns1 dan ns2
+
+- di Tirion, ubah serial number, dan tambahkan hostname pada file zone
+```
+nano /etc/bind/K33.com
+
+; -----  ADD HOSTNAME DI SINI -----
+; Hostname Klien
+earendil  IN    A       10.80.1.2
+elwing    IN    A       10.80.1.3
+cirdan    IN    A       10.80.2.2
+elrond    IN    A       10.80.2.3
+maglor    IN    A       10.80.2.4
+
+; Hostname Server
+sirion    IN    A       10.80.3.2
+lindon    IN    A       10.80.3.5
+vingilot  IN    A       10.80.3.6
+```
+- Restart layanan bind9
+`service bind9 restart`
+
 ### Soal 6
 ### Soal 7
 ### Soal 8

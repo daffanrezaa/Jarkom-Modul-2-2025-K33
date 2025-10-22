@@ -325,11 +325,9 @@ Verifikasi dari dua klien berbeda bahwa seluruh hostname tersebut ter-resolve ke
 
 - Edit config `/etc/bind/K33.com`, update serial number
 
-# memastikan A record dan Canonical NAME record baru
-# comment sirion dengan A record, karena A dan CNAME tidak boleh digunakan secara bersamaan
+- Pastikan A record dan Canonical NAME record baru
 ; ; www     IN      A       10.80.3.2       ; www -> Sirion
 
-# tambahkan di line paling bawah
 www       IN    CNAME   sirion.K33.com.
 static    IN    CNAME   lindon.K33.com.
 app       IN    CNAME   vingilot.K33.com.

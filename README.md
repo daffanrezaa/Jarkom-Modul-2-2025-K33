@@ -532,14 +532,16 @@ curl http://app.K33.com/about.php
 ![no10](/assets/aboutphp_modul2_jarkom.png)
 
 ### Soal 11
-Di muara sungai, Sirion berdiri sebagai reverse proxy. Terapkan path-based routing: /static → Lindon dan /app → Vingilot, sambil meneruskan header Host dan X-Real-IP ke backend. Pastikan Sirion menerima www.<xxxx>.com (kanonik) dan sirion.<xxxx>.com, dan bahwa konten pada /static dan /app di-serve melalui backend yang tepat.
+Di muara sungai, Sirion berdiri sebagai reverse proxy. Terapkan path-based routing: /static → Lindon dan /app → Vingilot, sambil meneruskan header Host dan X-Real-IP ke backend. Pastikan Sirion menerima `www.<xxxx>.com` (kanonik) dan `sirion.<xxxx>.com`, dan bahwa konten pada /static dan /app di-serve melalui backend yang tepat.
+
+Tujuan Soal: Mengubah Sirion dari server web biasa menjadi "penjaga gerbang" cerdas (Reverse Proxy). Tujuannya adalah agar semua permintaan dari klien masuk ke Sirion, dan Sirion akan meneruskannya ke server backend yang tepat (Lindon atau Vingilot) berdasarkan URL yang diminta.
 
 Pertama kita bisa masuk ke Sirion menggunakan IP ataupun langsung melalui console, kemudian dapat melakukan update dan install terlebih dahulu dengan command seperti di bawah ini
 ```bash
 apt update && apt install -y nginx
 ```
 
-Setelah itu kita dapat masuk ke sript `nano /etc/nginx/sites-available/sirion.K33.com`, pada script tersebut kita dapat menambahkan kode seperti di bawah ini. Atau jika ingin kode tetap ada dan tidak perlu memasukkan secara manual bisa menambahkan di root `/root/.bashrc`.
+Setelah itu kita dapat masuk ke sript `nano /etc/nginx/sites-available/sirion.K33.com`, pada script tersebut kita dapat menambahkan kode seperti di bawah ini untuk mengkonfigurasi Nginx di Sirion sebagai reverse proxy. Atau jika ingin kode tetap ada dan tidak perlu memasukkan secara manual bisa menambahkan di root `/root/.bashrc`.
 ```bash
 cat <<EOF > /etc/nginx/sites-available/sirion.K33.com
 server {
@@ -611,6 +613,8 @@ Berikut hasilnya
 ### Soal 12
 Ada kamar kecil di balik gerbang yakni /admin. Lindungi path tersebut di Sirion menggunakan Basic Auth, akses tanpa kredensial harus ditolak dan akses dengan kredensial yang benar harus diizinkan.
 
+Tujuan Soal: Menambahkan lapisan keamanan berupa permintaan username dan password (Basic Auth) untuk siapa saja yang mencoba mengakses path /admin/.
+
 Pertama kita masuk ke Sirion terlebih dahulu dan melakukan install
 ```bash
 apt install -y apache2-utils
@@ -621,7 +625,7 @@ Selanjutnya kita bisa membuat password sesuai keinginan kita
 htpasswd -c /etc/nginx/.htpasswd eldeargod
 ```
 
-Setelah itu kita masuk kemabli ke `nano /etc/nginx/sites-available/sirion.K33.com` dan masukkan kode di bawah ini setelah `server_name`
+Setelah itu kita masuk kembali ke `nano /etc/nginx/sites-available/sirion.K33.com` dan masukkan kode di bawah ini setelah `server_name`  untuk menambahkan blok location baru yang spesifik untuk /admin/
 ```bash
  location /admin/ {
     # Pesan yang akan muncul di jendela login
@@ -662,7 +666,9 @@ Berikut hasilnya
 ### Soal 13
 “Panggil aku dengan nama,” ujar Sirion kepada mereka yang datang hanya menyebut angka. Kanonisasikan endpoint, akses melalui IP address Sirion maupun `sirion.<xxxx>.com` harus redirect 301 ke `www.<xxxx>.com` sebagai hostname kanonik.
 
-Pertama kita bisa masuk ke Sirion dan buka script `nano /etc/nginx/sites-available/sirion.K33.com` dan kita tambahkan kode berikut 
+Tujuan Soal: Memaksa semua pengunjung untuk menggunakan satu alamat "resmi" (kanonik), yaitu `www.K33.com`. Jika ada yang mengakses melalui IP (10.80.3.2) atau nama alias (sirion.K33.com), mereka harus dialihkan secara permanen.
+
+Pertama kita bisa masuk ke Sirion dan buka script `nano /etc/nginx/sites-available/sirion.K33.com` dan kita tambahkan kode berikut untuk membuat blok server baru yang bertugas sebagai "pengalih".
 ```bash
 # Tambahkan panggilan tidak resmi
 server {
@@ -704,7 +710,7 @@ server {
 }
 ```
 
-Setelah itu kita bisa melakukan restart pada nginx dan selanjutnya kita bisa mencoba verifikasi menggunakan klien lain
+Setelah itu kita bisa melakukan restart pada nginx dan selanjutnya kita bisa mencoba verifikasi menggunakan klien lain dengan nama tidak resmi
 ```bash
 curl  http://sirion.K33.com/static/
 ```
@@ -723,6 +729,8 @@ Berikut hasilnya
 ### Soal 14
 Di Vingilot, catatan kedatangan harus jujur. Pastikan access log aplikasi di Vingilot mencatat IP address klien asli saat lalu lintas melewati Sirion (bukan IP Sirion).
 
+Tujuan Soal: Memperbaiki "buku tamu" (log) di Vingilot. Saat ini, Vingilot mencatat semua pengunjung berasal dari Sirion. Kita ingin Vingilot mencatat IP asli klien (misal, Elwing).
+
 Pertama kita bisa masuk ke Vingilot dan buka script `nano /etc/nginx/nginx.conf` untuk menambahkan akses log format baru dengan kode di bawah ini
 ```bash
 #tambahkan akses log format baru di atas access_log
@@ -732,8 +740,9 @@ http {
                             '"$http_user_agent"';
 }
 ```
+- '$http_x_real_ip - ...': Ini adalah bagian kuncinya. Alih-alih menggunakan variabel Nginx standar $remote_addr (yang akan berisi IP Sirion), kita memberitahunya untuk menggunakan variabel $http_x_real_ip. Variabel ini membaca nilai dari header X-Real-IP—header yang sama dengan yang sudah kita atur di Sirion pada Soal #11.
 
-Kemudian kita buka `nano /etc/nginx/sites-available/default` dan cari baris access_log dan rubah menggunakan kode di bawah ini
+Kemudian kita buka `nano /etc/nginx/sites-available/default` dan cari baris access_log dan rubah menggunakan kode di bawah ini untuk mengaktifkan format log yang sudah kita buat di atas
 ```bash
 access_log /var/log/nginx/access.log proxy_format;
 ```
@@ -755,6 +764,8 @@ Berikut hasilnya
 ### Soal 15
 Pelabuhan diuji gelombang kecil, salah satu klien yakni Elrond menjadi penguji dan menggunakan ApacheBench (ab) untuk membombardir `http://www.<xxxx>.com/app/` dan `http://www.<xxxx>.com/static/` melalui hostname kanonik. Untuk setiap endpoint lakukan 500 request dengan concurrency 10, dan rangkum hasil dalam tabel ringkas.
 
+Tujuan Soal: Mensimulasikan serangan atau lonjakan trafik kecil untuk menguji seberapa tangguh server Anda dan membandingkan performa server statis (Lindon) vs. dinamis (Vingilot).
+
 Pertama kita bisa membuka Elrond dan melakukan install
 ```bash
 apt update && apt install -y apache2-utils
@@ -764,10 +775,19 @@ Selanjutnya kita dapat melakukan uji endpoint statis dan dinamis
 ```bash
 # uji endpoint statis (/static)
 ab -n 500 -c 10 http://www.K33.com/static/
+```
+Menjalankan ab dengan parameter:
+- -n 500: Lakukan total number (jumlah) 500 permintaan.
 
+- -c 10: Gunakan concurrency (konkurensi) 10. Ini seperti 10 "klien virtual" yang mengakses secara bersamaan dan terus-menerus hingga total 500 permintaan terpenuhi.
+
+- .../static/: Targetnya adalah endpoint statis yang dilayani oleh Lindon.
+
+```bash
 # uji endpoint dinamis (/app)
 ab -n 500 -c 10 http://www.K33.com/app/
 ```
+Artinya sama seperti di atas, tetapi ini menargetkan ennpoint dinamis. 
 
 Hasil uji dinamis
 ![dinamis](assets/15_uji_dinamis_elrond.png)
@@ -778,7 +798,9 @@ Hasil uji statis
 ### Soal 16
 Badai mengubah garis pantai. Ubah A record lindon.<xxxx>.com ke alamat baru (ubah IP paling belakangnya saja agar mudah), naikkan SOA serial di Tirion (ns1) dan pastikan Valmar (ns2) tersinkron, karena static.<xxxx>.com adalah CNAME → lindon.<xxxx>.com, seluruh akses ke static.<xxxx>.com mengikuti alamat baru, tetapkan TTL = 30 detik untuk record yang relevan dan verifikasi tiga momen yakni sebelum perubahan (mengembalikan alamat lama), sesaat setelah perubahan namun sebelum TTL kedaluwarsa (masih alamat lama karena cache), dan setelah TTL kedaluwarsa (beralih ke alamat baru).
 
-Pertama buka Tirion dan buka `nano /etc/bind/K33.com` kemudian tambahkan kode ini
+Tujuan Soal: Membuktikan cara kerja caching DNS (DNS Cache) dan Time To Live (TTL). Kita akan mengubah alamat IP sebuah server (Lindon) dan mengamati bagaimana klien (Elrond) masih menggunakan alamat IP lama sampai cache-nya kedaluwarsa, serta memastikan server slave (Valmar) ikut ter-update.
+
+Pertama buka Tirion dan buka `nano /etc/bind/K33.com` kemudian tambahkan kode ini untuk mengubah record lindon
 ```bash
 #rubah record lindon dan tambahkan ttl 30
 lindon      30      IN      A       10.80.3.5
@@ -791,7 +813,7 @@ Kemudian kita dapat melakukan restart pada bind. Dan kemudian sebelum perubahan 
 dig static.K33.com
 ```
 
-Kemudian saat perbuhan kita melakukan edit pada ipnya
+Kemudian saat perubahan kita melakukan edit pada ipnya
 ```bash
 #saat perubahan
 #di lindon
@@ -801,7 +823,7 @@ ip addr del 10.80.3.5/24 dev eth0
 ip addr add 10.80.3.55/24 dev eth0
 ```
 
-Kemudian buka lagi Tirion dan buka `nano /etc/bind/K33.com` dan ubah ip lindon ke yang baru \
+Kemudian buka lagi Tirion dan buka `nano /etc/bind/K33.com` dan ubah ip lindon ke yang baru 
 ```bash
 #Ubah IP lindon ke yang baru:
 lindon      30      IN      A       10.80.3.55
@@ -822,11 +844,16 @@ Andaikata bumi bergetar dan semua tertidur sejenak, mereka harus bangkit sendiri
 ### Soal 18
 Sang musuh memiliki banyak nama. Tambahkan `melkor.<xxxx>.com` sebagai record TXT berisi “Morgoth (Melkor)” dan tambahkan `morgoth.<xxxx>.com` sebagai `CNAME → melkor.<xxxx>.com`, verifikasi query TXT terhadap melkor dan bahwa query ke morgoth mengikuti aliasnya.
 
+Tujuan Soal: Menambahkan dua tipe record DNS baru: TXT (untuk menyimpan teks) dan CNAME (untuk membuat alias).
+
 Pertama kita masuk ke Tirion dan buka script `nano /etc/bind/K33.com`, kemudian kita tambahkan kode di bawah ini
 ```bash
 melkor      IN      TXT     "Morgoth (Melkor)"
 morgoth     IN      CNAME   melkor
 ```
+Kita menambahkan dua baris baru ke file zona kita.
+- TXT: Membuat record Teks untuk melkor.K33.com. Isinya adalah string "Morgoth (Melkor)".
+- CNAME: Membuat record Canonical Name (Alias) untuk morgoth.K33.com yang menunjuk ke nama melkor.
 
 Setelah itu kita bisa melakukan restart pada bind dan setelah itu kita bisa melakukan verifikasi dengan klien lain
 ```bash
@@ -844,9 +871,11 @@ Hasil dari verifikasi txt
 ![txt](assets/18_cektxt.png)
 
 ### Soal 19
-Pelabuhan diperluas bagi para pelaut. Tambahkan havens.<xxxx>.com sebagai CNAME → www.<xxxx>.com, lalu akses layanan melalui hostname tersebut dari dua klien berbeda untuk memastikan resolusi dan rute aplikasi berfungsi.
+Pelabuhan diperluas bagi para pelaut. Tambahkan `havens.<xxxx>.com` sebagai `CNAME → www.<xxxx>.com`, lalu akses layanan melalui hostname tersebut dari dua klien berbeda untuk memastikan resolusi dan rute aplikasi berfungsi.
 
-Pertama kita masuk ke Tirion dan buka script `nano /etc/bind/K33.com` dan kita tambahkan CNAME dengan kode di bawah ini
+Tujuan Soal: Membuat alias DNS baru `(havens.K33.com)` yang menunjuk ke layanan web utama `(www.K33.com)` dan memverifikasi bahwa alias tersebut berfungsi penuh dari dua klien berbeda.
+
+Pertama kita masuk ke Tirion dan buka script `nano /etc/bind/K33.com` dan kita tambahkan CNAME dengan kode di bawah ini untuk menambahkan satu record CNAME baru yang membuat `havens.K33.com` menjadi alias untuk www.
 ```bash
 havens      IN      CNAME   www`
 ```
@@ -875,7 +904,9 @@ Berikut hasilnya di elrond
 ### Soal 20
 Kisah ditutup di beranda Sirion. Sediakan halaman depan bertajuk “War of Wrath: Lindon bertahan” yang memuat tautan ke /app dan /static. Pastikan seluruh klien membuka beranda dan menelusuri kedua tautan tersebut menggunakan hostname (mis. www.<xxxx>.com), bukan IP address.
 
-Pertama kita masuk ke Sirion dan buka script `nano /etc/nginx/sites-available/sirion.K33.com` untuk melakukan modifikasi konfigurasi nginx dan kita tambahkan kode di bawah ini
+Tujuan Soal: Mengganti halaman default (/) yang tadinya mengarah ke Vingilot dengan halaman penyambutan kustom yang disajikan langsung oleh Sirion.
+
+Pertama kita masuk ke Sirion dan buka script `nano /etc/nginx/sites-available/sirion.K33.com` untuk menambahkan blok `location = /` baru ke dalam blok server `www.K33.com.`
 ```bash
 # Tambahkan pada BLOK 2: UNTUK PANGGILAN RESMI (KANONIK)
 server {
@@ -905,7 +936,7 @@ server {
     }
 ```
 
-Kemudian kita bisa melakukan restart pada nginx dan melakukan verifikasi dengan klien lain
+Kemudian kita bisa melakukan restart pada nginx dan melakukan verifikasi dengan klien lain untuk membuktikan bahwa blok location = / Anda berhasil "mencegat" permintaan dan menyajikan halaman HTML kustom "War of Wrath". Dan juga test halaman lain yang tujuannya adalah untuk memastikan bahwa penambahan halaman depan kustom tidak merusak fungsionalitas yang sudah ada (/static/ dan /app/).
 ```bash
 # Verifikasi dari kilen lain cth:erlond
 curl http://www.K33.com/
